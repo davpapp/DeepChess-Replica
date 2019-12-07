@@ -1,13 +1,11 @@
-import chess.pgn
 import chess
+import chess.pgn
+
 
 pgn = open('games/2015-05.bare.[6004].pgn')
 
-first_game = chess.pgn.read_game(pgn)
-second_game = chess.pgn.read_game(pgn)
-
-print(first_game.headers['Result'])
-
+def autoencoder(board):
+    pass
 
 def boardToBitstring(board):
     boardBitstring = ''
@@ -24,20 +22,50 @@ def boardToBitstring(board):
     blackCastlingRIghtQueenside = '1' if board.has_queenside_castling_rights(chess.BLACK) else '0'
 
     boardBitstring += sideToMove + whiteCastlingRight + whiteCastlingRightQueenside + blackCastlingRight + blackCastlingRIghtQueenside
-    print(len(boardBitstring))
+    #print(len(boardBitstring))
+    return boardBitstring
 
 def pieceToBitstring(piece):
     if piece == None:
         return '0000'
 
     color = '1' if piece.color else '0'
-    type = format(piece.piece_type, '03b')
+    t = format(piece.piece_type, '03b')
 
-    return color + type
+    return color + t
+
+def parse_game(game):
+    board = game.board()
+    board_data = []
+    #print(game.mainline_moves())
+    move_number = 1
+    alg_move = ""
+    for move in game.mainline_moves():
+        if move_number > 1:
+            alg_move = board.san(move)
+        if not move:
+            break
+        board.push(move)
+        move_number += 1
+        if move_number > 5 and move_number % 4 == 0 and 'x' not in alg_move:
+            board_data.append(boardToBitstring(board))
+    return [board_data, game.headers['Result']]
 
 
 
-board = first_game.board()
-for move in first_game.mainline_moves():
-    board.push(move)
-    boardToBitstring(board)
+data = []
+while True:
+    game = chess.pgn.read_game(pgn)
+    if not game:
+       break
+    data.append(parse_game(game))
+
+print(data[2000])
+
+
+
+
+#board = first_game.board()
+#for move in first_game.mainline_moves():
+#    board.push(move)
+#    boardToBitstring(board)
