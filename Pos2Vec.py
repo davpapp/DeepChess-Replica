@@ -69,7 +69,11 @@ class Autoencoder(nn.Module):
         super(Autoencoder, self).__init__()
 
         self.encoder = nn.Sequential(
-            nn.Linear(773, 200),
+            nn.Linear(773, 600),
+            nn.ReLU(True),
+            nn.Linear(600, 400),
+            nn.ReLU(True),
+            nn.Linear(400, 200),
             nn.ReLU(True),
             nn.Linear(200, 100),
             nn.ReLU(True),
@@ -77,7 +81,11 @@ class Autoencoder(nn.Module):
         self.decoder = nn.Sequential(
             nn.Linear(100, 200),
             nn.ReLU(True),
-            nn.Linear(200, 773),
+            nn.Linear(200, 400),
+            nn.ReLU(True),
+            nn.Linear(400, 600),
+            nn.ReLU(True),
+            nn.Linear(600, 773),
             nn.Sigmoid()
         )
 
@@ -137,7 +145,7 @@ with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as h
     #print(len(games_data))
 
     print("There are", len(games_data), "available for training.")
-    training_size = 1000
+    training_size = 50000
     games = [game[0] for game in games_data][:training_size]
     outcomes = [game[1] for game in games_data][:training_size]
     #print(games[:2])
@@ -151,7 +159,8 @@ with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as h
     train_size = int(0.75 * len(games_dataset))
     test_size = len(games_dataset) - train_size
     train_dataset, test_dataset = torch.utils.data.random_split(games_dataset, [train_size, test_size])
-
+    print("Training set size:", train_size)
+    print("Testing set size:", test_size)
 
     train_dataloader = DataLoader(train_dataset, batch_size=4, shuffle=True)
     test_dataloader = DataLoader(test_dataset, batch_size=4, shuffle=True)
