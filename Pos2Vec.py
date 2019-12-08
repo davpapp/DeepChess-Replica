@@ -53,38 +53,70 @@ class BitstringToTensor(object):
         else:
             outcome_code = 2
         outcome_tensor = torch.tensor(outcome_code)
-        print(outcome, ' -> ', outcome_code, " -> ", outcome_tensor)
+        #print(outcome, ' -> ', outcome_code, " -> ", outcome_tensor)
 
         return {'board': board_tensor, 'outcome': outcome_tensor}
 
 
 
 
-"""
+
 class Autoencoder(nn.Module):
     def __init__(self):
+        super(Autoencoder, self).__init__()
+
         self.encoder = nn.Sequential(
-            nn.Conv2d(3, 6, kernel_size=5),
+            nn.Linear(761, 600),
             nn.ReLU(True),
-            nn.Conv2d(6,16,kernel_size=5),
-            nn.ReLU(True))
+            nn.Linear(600, 400),
+            nn.ReLU(True),
+            nn.Linear(400, 200),
+            nn.ReLU(True),
+            nn.Linear(200, 100),
+            nn.ReLU(True)
+        )
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(16,6,kernel_size=5),
+            nn.Linear(100, 200),
             nn.ReLU(True),
-            nn.ConvTranspose2d(6,3,kernel_size=5),
+            nn.Linear(200, 400),
             nn.ReLU(True),
-            nn.Sigmoid())
-    def forward(self,x):
+            nn.Linear(400, 600),
+            nn.ReLU(True),
+            nn.Linear(600, 761),
+            nn.ReLU(True),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
         x = self.encoder(x)
         x = self.decoder(x)
         return x
-"""
 
-"""with open('parsed_games/2015-05.bare.[6004].parsed.pickle', 'rb') as handle:
-    game_data = pickle.load(handle)
-    print(game_data[0])
-    print(len(game_data))
-"""
+
+def trainModel(dataloader):
+    #defining some params
+    num_epochs = 5 #you can go for more epochs, I am using a mac
+    batch_size = 128
+
+    model = Autoencoder().cpu()
+    distance = nn.MSELoss()
+    optimizer = torch.optim.Adam(model.parameters(),weight_decay=1e-5)
+
+    for epoch in range(num_epochs):
+        for data in dataloader:
+            print(data)
+            board, outcome = data
+            board = Variable(board).cpu()
+            # ===================forward=====================
+            output = model(outcome)
+            loss = distance(output, img)
+            # ===================backward====================
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+        # ===================log========================
+        print('epoch [{}/{}], loss:{:.4f}'.format(epoch+1, num_epochs, loss.data()))
+
 
 
 with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as handle:
@@ -101,9 +133,12 @@ with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as h
                                 labels=outcomes,
                                 transform=transforms.Compose([BitstringToTensor()]))
 
-    for i in range(len(games_dataset)):
-        sample = games_dataset[i]
-        print(i, sample['board'].size(), sample['outcome'].size())
+    dataloader = DataLoader(games_dataset, batch_size=4, shuffle=True)
+    trainModel(dataloader)
 
-        if i == 100:
-            break
+    """for i in range(len(games_dataset)):
+        sample = games_dataset[i]
+        print(i, sample['board'].size(), sample['outcome'])
+
+        if i == 5:
+            break"""
