@@ -10,6 +10,10 @@ print(first_game.headers['Result'])
 
 
 def boardToBitstring(board):
+    """
+    Converts the board to a 261 bit representation of the chess board.
+    I'm not sure pieceToBitstring is correct.
+    """
     boardBitstring = ''
     for i in range(0, 8):
         for j in range(0, 8):
