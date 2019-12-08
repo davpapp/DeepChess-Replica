@@ -12,7 +12,7 @@ def autoencoder(board):
 
 def boardToBitstring(board):
     """
-    Converts the board to a 261 bit representation of the chess board.
+    Converts the board to a 773 bit representation of the chess board.
     I'm not sure pieceToBitstring is correct.
     """
     boardBitstring = ''
@@ -34,12 +34,23 @@ def boardToBitstring(board):
 
 def pieceToBitstring(piece):
     if piece == None:
-        return '0000'
+        return '000000000000'
 
-    color = '1' if piece.color else '0'
-    t = format(piece.piece_type, '03b')
+    is_white_pawn = '1' if piece.piece_type == chess.PAWN and piece.color else '0'
+    is_white_knight = '1' if piece.piece_type == chess.KNIGHT and piece.color else '0'
+    is_white_bishop = '1' if piece.piece_type == chess.BISHOP and piece.color else '0'
+    is_white_rook = '1' if piece.piece_type == chess.ROOK and piece.color else '0'
+    is_white_queen = '1' if piece.piece_type == chess.QUEEN and piece.color else '0'
+    is_white_king = '1' if piece.piece_type == chess.KING and piece.color else '0'
 
-    return color + t
+    is_black_pawn = '1' if piece.piece_type == chess.PAWN and not piece.color else '0'
+    is_black_knight = '1' if piece.piece_type == chess.KNIGHT and not piece.color else '0'
+    is_black_bishop = '1' if piece.piece_type == chess.BISHOP and not piece.color else '0'
+    is_black_rook = '1' if piece.piece_type == chess.ROOK and not piece.color else '0'
+    is_black_queen = '1' if piece.piece_type == chess.QUEEN and not piece.color else '0'
+    is_black_king = '1' if piece.piece_type == chess.KING and not piece.color else '0'
+
+    return is_white_pawn + is_white_knight + is_white_bishop + is_white_rook + is_white_queen + is_white_king + is_black_pawn + is_black_knight + is_black_bishop + is_black_rook + is_black_queen + is_black_king
 
 def parse_game(game):
     board = game.board()

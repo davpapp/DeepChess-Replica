@@ -69,7 +69,7 @@ class Autoencoder(nn.Module):
         super(Autoencoder, self).__init__()
 
         self.encoder = nn.Sequential(
-            nn.Linear(261, 200),
+            nn.Linear(773, 200),
             nn.ReLU(True),
             nn.Linear(200, 100),
             nn.ReLU(True),
@@ -77,7 +77,7 @@ class Autoencoder(nn.Module):
         self.decoder = nn.Sequential(
             nn.Linear(100, 200),
             nn.ReLU(True),
-            nn.Linear(200, 261),
+            nn.Linear(200, 773),
             nn.Sigmoid()
         )
 
