@@ -98,22 +98,33 @@ def trainModel(dataloader):
     num_epochs = 5 #you can go for more epochs, I am using a mac
     batch_size = 128
 
-    model = Autoencoder().cpu()
+    net = Autoencoder()
     distance = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(),weight_decay=1e-5)
+    optimizer = torch.optim.Adam(net.parameters(),weight_decay=1e-5)
 
     for epoch in range(num_epochs):
         for data in dataloader:
             print(data)
-            board, outcome = data
-            board = Variable(board).cpu()
+
+            board, outcome = data['board'], data['outcome']
+            print(board)
+            print(outcome)
+            print('\n\n')
+            optimizer.zero_grad()
+
+            outputs = net(board)
+            loss = distance(outputs, outcomes)
+            loss.backward()
+            optimizer.step()
+            """board, outcome = data
+            board = Variable(board)
             # ===================forward=====================
             output = model(outcome)
             loss = distance(output, img)
             # ===================backward====================
             optimizer.zero_grad()
             loss.backward()
-            optimizer.step()
+            optimizer.step()"""
         # ===================log========================
         print('epoch [{}/{}], loss:{:.4f}'.format(epoch+1, num_epochs, loss.data()))
 
