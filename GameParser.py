@@ -1,8 +1,10 @@
 import chess
 import chess.pgn
+import pickle
 
 
 pgn = open('games/2015-05.bare.[6004].pgn')
+PARSED_GAME_FILE = 'parsed_games/2015-05.bare.[6004].parsed.pickle'
 
 def autoencoder(board):
     pass
@@ -63,6 +65,9 @@ while True:
     if not game:
        break
     data.append(parse_game(game))
+
+with open(PARSED_GAME_FILE, 'wb') as handle:
+    pickle.dump(data, handle)
 
 print(data[2000])
 

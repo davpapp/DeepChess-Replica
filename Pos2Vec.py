@@ -1,5 +1,6 @@
 import chess.pgn
 import chess
+import pickle
 
 import torch
 import torchvision as tv
@@ -9,38 +10,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from torchvision.utils import save_image
 
-pgn = open('games/2015-05.bare.[6004].pgn')
-
-def boardToBitstring(board):
-    """
-    Converts the board to a 261 bit representation of the chess board.
-    I'm not sure pieceToBitstring is correct.
-    """
-    boardBitstring = ''
-    for i in range(0, 8):
-        for j in range(0, 8):
-            piece = board.piece_at(chess.square(i, j))
-            pieceBitstring = pieceToBitstring(piece)
-            boardBitstring += pieceBitstring
-
-    sideToMove = '1' if board.turn == chess.WHITE else '0'
-    whiteCastlingRight = '1' if board.has_kingside_castling_rights(chess.WHITE) else '0'
-    whiteCastlingRightQueenside = '1' if board.has_queenside_castling_rights(chess.WHITE) else '0'
-    blackCastlingRight = '1' if board.has_kingside_castling_rights(chess.BLACK) else '0'
-    blackCastlingRIghtQueenside = '1' if board.has_queenside_castling_rights(chess.BLACK) else '0'
-
-    boardBitstring += sideToMove + whiteCastlingRight + whiteCastlingRightQueenside + blackCastlingRight + blackCastlingRIghtQueenside
-    return boardBitstring
-
-def pieceToBitstring(piece):
-    if piece == None:
-        return '0000'
-
-    color = '1' if piece.color else '0'
-    type = format(piece.piece_type, '03b')
-
-    return color + type
-
+"""
 class BoardDataset(Dataset):
     def __init__(self, boards, labels, transform=None):
         self.boards = boards
@@ -51,8 +21,8 @@ class BoardDataset(Dataset):
         return len(self.boards)
 
     def __getitem__(self, idx):
-
-
+        pass
+"""
 
 
 """
@@ -75,13 +45,7 @@ class Autoencoder(nn.Module):
         return x
 """
 
-
-
-for i in range(0, 10):
-    game = chess.pgn.read_game(pgn)
-
-    board = game.board()
-    for move in game.mainline_moves():
-        board.push(move)
-        boardBitstring = boardToBitstring(board)
-        print(boardBitstring)
+with open('parsed_games/2015-05.bare.[6004].parsed.pickle', 'rb') as handle:
+    game_data = pickle.load(handle)
+    print(game_data[0])
+    print(len(game_data))
