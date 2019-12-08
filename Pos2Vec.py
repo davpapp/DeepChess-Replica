@@ -87,9 +87,9 @@ class Autoencoder(nn.Module):
         return x
 
 
-def trainModel(dataloader):
+def trainModel(train_dataloader, test_dataloader):
     #defining some params
-    num_epochs = 5 #you can go for more epochs, I am using a mac
+    num_epochs = 10 #you can go for more epochs, I am using a mac
     batch_size = 128
 
     net = Autoencoder()
@@ -97,7 +97,7 @@ def trainModel(dataloader):
     optimizer = torch.optim.Adam(net.parameters(),weight_decay=1e-5)
 
     for epoch in range(num_epochs):
-        for data in dataloader:
+        for data in train_dataloader:
             board, outcome = data['board'].float(), data['outcome'].float()
             #print(board)
             #print(outcome)
@@ -111,7 +111,18 @@ def trainModel(dataloader):
             loss = distance(outputs, board)
             loss.backward()
             optimizer.step()
-        print('epoch [{}/{}], loss:{:.4f}'.format(epoch+1, num_epochs, loss.data.numpy()))
+        # At the end of the epoch, do a pass on the test set
+        total_test_loss = 0
+        for data in test_dataloader:
+            board, outcome = data['board'].float(), data['outcome'].float()
+
+            outputs = net(board)
+            loss = distance(outputs, board)
+            total_test_loss += loss.data.numpy()
+        test_loss = total_test_loss / len(test_dataloader)
+
+
+        print('epoch [{}/{}], train loss:{:.4f}, test_loss:{:.4f}'.format(epoch+1, num_epochs, loss.data.numpy(), test_loss))
 
 
     # Save model so it can be loaded:
@@ -126,7 +137,7 @@ with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as h
     #print(len(games_data))
 
     print("There are", len(games_data), "available for training.")
-    training_size = 2000
+    training_size = 1000
     games = [game[0] for game in games_data][:training_size]
     outcomes = [game[1] for game in games_data][:training_size]
     #print(games[:2])
@@ -137,13 +148,19 @@ with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as h
     games_dataset = GamesDataset(boards=games,
                                 labels=outcomes,
                                 transform=transforms.Compose([BitstringToTensor()]))
+    train_size = int(0.75 * len(games_dataset))
+    test_size = len(games_dataset) - train_size
+    train_dataset, test_dataset = torch.utils.data.random_split(games_dataset, [train_size, test_size])
 
-    dataloader = DataLoader(games_dataset, batch_size=1, shuffle=True)
-    trainModel(dataloader)
 
-    for i in range(len(games_dataset)):
+    train_dataloader = DataLoader(train_dataset, batch_size=4, shuffle=True)
+    test_dataloader = DataLoader(test_dataset, batch_size=4, shuffle=True)
+    trainModel(train_dataloader, test_dataloader)
+
+    """for i in range(len(games_dataset)):
         sample = games_dataset[i]
         print(i, sample['board'].size(), sample['outcome'])
 
         if i == 3:
             break
+    """
