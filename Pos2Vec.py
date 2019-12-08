@@ -13,6 +13,7 @@ from torchvision.utils import save_image
 from torch.utils.data import Dataset, DataLoader
 
 
+PATH = 'saved_models/autoencoder.pt'
 
 class GamesDataset(Dataset):
     def __init__(self, boards, labels, transform=None):
@@ -110,18 +111,12 @@ def trainModel(dataloader):
             loss = distance(outputs, board)
             loss.backward()
             optimizer.step()
-            """board, outcome = data
-            board = Variable(board)
-            # ===================forward=====================
-            output = model(outcome)
-            loss = distance(output, img)
-            # ===================backward====================
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()"""
-        # ===================log========================
-        #print('epoch [{}/{}], loss:0'.format(epoch+1, num_epochs))
         print('epoch [{}/{}], loss:{:.4f}'.format(epoch+1, num_epochs, loss.data.numpy()))
+
+
+    # Save model so it can be loaded:
+    # https://pytorch.org/tutorials/beginner/saving_loading_models.html
+    torch.save(net.state_dict(), PATH)
 
 
 
@@ -130,11 +125,13 @@ with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as h
     #print(games_data[:5])
     #print(len(games_data))
 
-    games = [game[0] for game in games_data][:500]
-    outcomes = [game[1] for game in games_data][:500]
+    print("There are", len(games_data), "available for training.")
+    training_size = 2000
+    games = [game[0] for game in games_data][:training_size]
+    outcomes = [game[1] for game in games_data][:training_size]
     #print(games[:2])
     #print(labels[:60])
-    print("There are", len(games), " games to run training on.")
+    print("Running training on", len(games), "games.")
 
 
     games_dataset = GamesDataset(boards=games,
