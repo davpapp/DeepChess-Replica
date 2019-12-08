@@ -50,8 +50,10 @@ class BitstringToTensor(object):
             outcome_code = 0
         elif (outcome == '1/2-1/2'):
             outcome_code = 1
-        else:
+        elif (outcome == '0-1'):
             outcome_code = 2
+        else:
+            raise Exception('Unexpected outcome.')
         outcome_tensor = torch.tensor(outcome_code)
         #print(outcome, ' -> ', outcome_code, " -> ", outcome_tensor)
 
@@ -66,24 +68,15 @@ class Autoencoder(nn.Module):
         super(Autoencoder, self).__init__()
 
         self.encoder = nn.Sequential(
-            nn.Linear(761, 600),
-            nn.ReLU(True),
-            nn.Linear(600, 400),
-            nn.ReLU(True),
-            nn.Linear(400, 200),
+            nn.Linear(261, 200),
             nn.ReLU(True),
             nn.Linear(200, 100),
-            nn.ReLU(True)
+            nn.ReLU(True),
         )
         self.decoder = nn.Sequential(
             nn.Linear(100, 200),
             nn.ReLU(True),
-            nn.Linear(200, 400),
-            nn.ReLU(True),
-            nn.Linear(400, 600),
-            nn.ReLU(True),
-            nn.Linear(600, 761),
-            nn.ReLU(True),
+            nn.Linear(200, 261),
             nn.Sigmoid()
         )
 
@@ -104,16 +97,17 @@ def trainModel(dataloader):
 
     for epoch in range(num_epochs):
         for data in dataloader:
-            print(data)
+            board, outcome = data['board'].float(), data['outcome'].float()
+            #print(board)
+            #print(outcome)
+            #print('\n\n')
 
-            board, outcome = data['board'], data['outcome']
-            print(board)
-            print(outcome)
-            print('\n\n')
             optimizer.zero_grad()
-
             outputs = net(board)
-            loss = distance(outputs, outcomes)
+            #print("outputs:")
+            #print(outputs)
+
+            loss = distance(outputs, board)
             loss.backward()
             optimizer.step()
             """board, outcome = data
@@ -126,7 +120,8 @@ def trainModel(dataloader):
             loss.backward()
             optimizer.step()"""
         # ===================log========================
-        print('epoch [{}/{}], loss:{:.4f}'.format(epoch+1, num_epochs, loss.data()))
+        #print('epoch [{}/{}], loss:0'.format(epoch+1, num_epochs))
+        print('epoch [{}/{}], loss:{:.4f}'.format(epoch+1, num_epochs, loss.data.numpy()))
 
 
 
@@ -135,21 +130,23 @@ with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as h
     #print(games_data[:5])
     #print(len(games_data))
 
-    games = [game[0] for game in games_data]
-    outcomes = [game[1] for game in games_data]
+    games = [game[0] for game in games_data][:500]
+    outcomes = [game[1] for game in games_data][:500]
     #print(games[:2])
     #print(labels[:60])
+    print("There are", len(games), " games to run training on.")
+
 
     games_dataset = GamesDataset(boards=games,
                                 labels=outcomes,
                                 transform=transforms.Compose([BitstringToTensor()]))
 
-    dataloader = DataLoader(games_dataset, batch_size=4, shuffle=True)
+    dataloader = DataLoader(games_dataset, batch_size=1, shuffle=True)
     trainModel(dataloader)
 
-    """for i in range(len(games_dataset)):
+    for i in range(len(games_dataset)):
         sample = games_dataset[i]
         print(i, sample['board'].size(), sample['outcome'])
 
-        if i == 5:
-            break"""
+        if i == 3:
+            break
