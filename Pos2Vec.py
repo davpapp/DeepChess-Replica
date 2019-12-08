@@ -3,15 +3,17 @@ import chess
 import pickle
 
 import torch
-import torchvision as tv
+import torchvision
 import torchvision.transforms as transforms
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from torchvision.utils import save_image
+from torch.utils.data import Dataset, DataLoader
 
-"""
-class BoardDataset(Dataset):
+
+
+class GamesDataset(Dataset):
     def __init__(self, boards, labels, transform=None):
         self.boards = boards
         self.labels = labels
@@ -21,8 +23,15 @@ class BoardDataset(Dataset):
         return len(self.boards)
 
     def __getitem__(self, idx):
-        pass
-"""
+        board = self.boards[idx]
+        outcome = self.labels[idx]
+
+        sample = {'board': board, 'outcome': outcome}
+        if self.transform:
+            sample = self.transform(sample)
+
+        return sample
+
 
 
 """
@@ -45,7 +54,20 @@ class Autoencoder(nn.Module):
         return x
 """
 
-with open('parsed_games/2015-05.bare.[6004].parsed.pickle', 'rb') as handle:
+"""with open('parsed_games/2015-05.bare.[6004].parsed.pickle', 'rb') as handle:
     game_data = pickle.load(handle)
     print(game_data[0])
     print(len(game_data))
+"""
+
+
+with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as handle:
+    games_data = pickle.load(handle)
+    print(games_data[:5])
+    print(len(games_data))
+
+    games = [game[0] for game in games_data]
+    labels = [game[1] for game in games_data]
+    print(games[:5])
+    print(labels[:5])
+    games_dataset = GamesDataset(games, labels)

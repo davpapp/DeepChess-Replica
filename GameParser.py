@@ -5,6 +5,7 @@ import pickle
 
 pgn = open('games/2015-05.bare.[6004].pgn')
 PARSED_GAME_FILE = 'parsed_games/2015-05.bare.[6004].parsed.pickle'
+PARSED_FLATTENED_GAME_FILE = 'parsed_games/2015-05.bare.[6004].parsed_flattened.pickle'
 
 def autoencoder(board):
     pass
@@ -66,10 +67,22 @@ while True:
        break
     data.append(parse_game(game))
 
+# There's probably a cleaner way of doing this.
+flattened_data = []
+for game in data:
+    boards, outcome = game[0], game[1]
+    for board in boards:
+        flattened_data.append([board, outcome])
+
+print(flattened_data[:5])
+
 with open(PARSED_GAME_FILE, 'wb') as handle:
     pickle.dump(data, handle)
 
-print(data[2000])
+with open(PARSED_FLATTENED_GAME_FILE, 'wb') as handle:
+    pickle.dump(flattened_data, handle)
+
+#print(data[2000])
 
 
 
