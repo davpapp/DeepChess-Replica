@@ -12,6 +12,20 @@ from torch.autograd import Variable
 from torchvision.utils import save_image
 from torch.utils.data import Dataset, DataLoader
 
+print("Cuda available: ", torch.cuda.is_available())
+if torch.cuda.is_available():
+  dev = "cuda:0"
+else:
+  dev = "cpu"
+device = torch.device(dev)
+print("Using device:", device)
+#import pycuda.driver as cuda
+#cuda.init()
+## Get Id of default device
+#torch.cuda.current_device()
+# 0
+#cuda.Device(0).name() # '0' is the id of your GPU
+# Tesla K80
 
 PATH = 'saved_models/autoencoder.pt'
 
@@ -100,13 +114,13 @@ def trainModel(train_dataloader, test_dataloader):
     num_epochs = 10 #you can go for more epochs, I am using a mac
     batch_size = 128
 
-    net = Autoencoder()
+    net = Autoencoder().to(device)
     distance = nn.MSELoss()
     optimizer = torch.optim.Adam(net.parameters(),weight_decay=1e-5)
 
     for epoch in range(num_epochs):
         for data in train_dataloader:
-            board, outcome = data['board'].float(), data['outcome'].float()
+            board, outcome = data['board'].float().to(device), data['outcome'].float().to(device)
             #print(board)
             #print(outcome)
             #print('\n\n')
@@ -145,7 +159,7 @@ with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as h
     #print(len(games_data))
 
     print("There are", len(games_data), "available for training.")
-    training_size = 50000
+    training_size = 1000
     games = [game[0] for game in games_data][:training_size]
     outcomes = [game[1] for game in games_data][:training_size]
     #print(games[:2])
