@@ -111,7 +111,7 @@ class Autoencoder(nn.Module):
 
 def trainModel(train_dataloader, test_dataloader):
     #defining some params
-    num_epochs = 20 #you can go for more epochs, I am using a mac
+    num_epochs = 100 #you can go for more epochs, I am using a mac
     batch_size = 128
 
     net = Autoencoder().to(device)
