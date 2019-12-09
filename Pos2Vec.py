@@ -27,7 +27,7 @@ print("Using device:", device)
 #cuda.Device(0).name() # '0' is the id of your GPU
 # Tesla K80
 
-PATH = 'saved_models/autoencoder.pt'
+PATH = 'saved_models/'
 
 class GamesDataset(Dataset):
     def __init__(self, boards, labels, transform=None):
@@ -111,7 +111,7 @@ class Autoencoder(nn.Module):
 
 def trainModel(train_dataloader, test_dataloader):
     #defining some params
-    num_epochs = 10 #you can go for more epochs, I am using a mac
+    num_epochs = 20 #you can go for more epochs, I am using a mac
     batch_size = 128
 
     net = Autoencoder().to(device)
@@ -142,6 +142,7 @@ def trainModel(train_dataloader, test_dataloader):
             loss = distance(outputs, board)
             total_test_loss += loss.data.numpy()
         test_loss = total_test_loss / len(test_dataloader)
+        torch.save(net.state_dict(), PATH + 'autoencoder_' + str(epoch) + '.pt')
 
 
         print('epoch [{}/{}], train loss:{:.4f}, test_loss:{:.4f}'.format(epoch+1, num_epochs, loss.data.numpy(), test_loss))
@@ -149,7 +150,7 @@ def trainModel(train_dataloader, test_dataloader):
 
     # Save model so it can be loaded:
     # https://pytorch.org/tutorials/beginner/saving_loading_models.html
-    torch.save(net.state_dict(), PATH)
+    #torch.save(net.state_dict(), PATH)
 
 
 
@@ -159,7 +160,7 @@ with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as h
     #print(len(games_data))
 
     print("There are", len(games_data), "available for training.")
-    training_size = 1000
+    training_size = 100000
     games = [game[0] for game in games_data][:training_size]
     outcomes = [game[1] for game in games_data][:training_size]
     #print(games[:2])
