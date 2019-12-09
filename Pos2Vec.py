@@ -136,7 +136,7 @@ def trainModel(train_dataloader, test_dataloader):
         # At the end of the epoch, do a pass on the test set
         total_test_loss = 0
         for data in test_dataloader:
-            board, outcome = data['board'].float(), data['outcome'].float()
+            board, outcome = data['board'].float().to(device), data['outcome'].float().to(device)
 
             outputs = net(board)
             loss = distance(outputs, board)
