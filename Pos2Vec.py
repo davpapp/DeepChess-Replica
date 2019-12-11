@@ -18,7 +18,7 @@ if torch.cuda.is_available():
 else:
   dev = "cpu"
 device = torch.device(dev)
-print("Using device:", device)
+print("Using device:", device, "\n")
 #import pycuda.driver as cuda
 #cuda.init()
 ## Get Id of default device
@@ -147,6 +147,7 @@ class Combined(nn.Module):
     def forward(self, x):
         x = self.modelA(x)
         x = self.modelB(x)
+        x = self.classifier(x)
         return x
 
 
@@ -193,7 +194,7 @@ def trainAutoencoder(train_dataloader, test_dataloader):
         print('epoch [{}/{}], train loss:{:.4f}, test_loss:{:.4f}'.format(epoch+1, num_epochs, loss.data.numpy(), test_loss))
 
 def trainDeepChess(train_dataloader, test_dataloader):
-    num_epochs = 10
+    num_epochs = 2
     batch_size = 128
 
     autoencoder = Autoencoder()
@@ -209,12 +210,14 @@ def trainDeepChess(train_dataloader, test_dataloader):
     for epoch in range(num_epochs):
         for data in train_dataloader:
             parsed_board, outcome = data['parsed_board'].float(), data['outcome'].float()
-            print(parsed_board)
+            #print(parsed_board)
 
             optimizer.zero_grad()
             outputs = net(parsed_board)
-            #print("outputs:")
-            #print(outputs)
+            """print("outputs:")
+            print(outputs)
+            print("actual outcome:")
+            print(outcome)"""
 
             loss = distance(outputs, outcome)
             loss.backward()
@@ -242,7 +245,11 @@ def validateDeepChess(train_dataloader, test_dataloader):
     for data in train_dataloader:
         if idx > 5:
             break
-        parsed_board, board, outcome = data['parsed_board'].float(), data['board'], data['outcome'].float()
+
+        parsed_board, board_fen, outcome = data['parsed_board'].float(), data['board'], data['outcome'].float()
+        # reconstruct board
+        print(board_fen)
+        board = chess.Board(fen=board_fen)
         print(board)
         idx += 1
 
@@ -274,15 +281,15 @@ with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as h
     print("Training set size:", train_size)
     print("Testing set size:", test_size)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=4, shuffle=True)
-    test_dataloader = DataLoader(test_dataset, batch_size=4, shuffle=True)
+    train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=True)
+    test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=True)
 
     #what_to_train = 'AUTOENCODER'
     what_to_train = 'DEEPCHESS'
     if what_to_train == 'AUTOENCODER':
-        print("Training Autoencoder...")
+        print("Training Autoencoder...\n\n")
         trainAutoencoder(train_dataloader, test_dataloader)
     elif what_to_train == 'DEEPCHESS':
-        print("Training DeepChess...")
+        print("Training DeepChess...\n\n")
         trainDeepChess(train_dataloader, test_dataloader)
         validateDeepChess(train_dataloader, test_dataloader)
