@@ -13,19 +13,22 @@ from torchvision.utils import save_image
 from torch.utils.data import Dataset, DataLoader
 
 class GamesDataset(Dataset):
-    def __init__(self, boards, labels, transform=None):
+    def __init__(self, parsed_boards, boards, labels, transform=None):
+        self.parsed_boards = parsed_boards
         self.boards = boards
         self.labels = labels
         self.transform = transform
 
     def __len__(self):
-        return len(self.boards)
+        return len(self.parsed_boards)
 
     def __getitem__(self, idx):
+        parsed_board = self.parsed_boards[idx]
         board = self.boards[idx]
         outcome = self.labels[idx]
 
-        sample = {'board': board, 'outcome': outcome}
+        sample = {'parsed_board': parsed_board, 'board': board, 'outcome': outcome}
+        #print(sample)
         if self.transform:
             sample = self.transform(sample)
 

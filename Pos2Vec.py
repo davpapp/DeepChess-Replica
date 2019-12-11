@@ -27,7 +27,8 @@ print("Using device:", device)
 #cuda.Device(0).name() # '0' is the id of your GPU
 # Tesla K80
 
-PATH = 'saved_models/'
+AUTOENCODER_PATH = 'saved_models/autoencoder/'
+DEEPCHESS_PATH = 'saved_models/deepchess/'
 
 class GamesDataset(Dataset):
     def __init__(self, parsed_boards, boards, labels, transform=None):
@@ -108,20 +109,56 @@ class Autoencoder(nn.Module):
 
     def forward(self, x):
         x = self.encoder(x)
-        x = self.decoder(x)
+        # Uncomment the line below if training
+        #x = self.decoder(x)
+        return x
+
+class Evaluator(nn.Module):
+    def __init__(self):
+        super(Evaluator, self).__init__()
+        self.connect = nn.Linear(100, 400)
+        self.lin1 = nn.Linear(400, 200)
+        self.lin2 = nn.Linear(200, 100)
+        self.lin3 = nn.Linear(100, 2)
+
+    def forward(self, x):
+        x = self.connect(x)
+        x = self.lin1(x)
+        x = self.lin2(x)
+        x = self.lin3(x)
+        return x
+
+    # The loss function (which we chose to include as a method of the class, but doesn't need to be)
+    # returns the loss and optimizer used by the model
+    def get_loss(self, learning_rate):
+        # Loss function
+        loss = nn.CrossEntropyLoss()
+        # Optimizer, self.parameters() returns all the Pytorch operations that are attributes of the class
+        optimizer = optim.Adam(self.parameters(), lr=learning_rate)
+        return loss, optimizer
+
+class Combined(nn.Module):
+    def __init__(self, modelA, modelB):
+        super(Combined, self).__init__()
+        self.modelA = modelA
+        self.modelB = modelB
+        self.classifier = nn.Linear(2, 1)
+
+    def forward(self, x):
+        x = self.modelA(x)
+        x = self.modelB(x)
         return x
 
 
-def trainModel(train_dataloader, test_dataloader):
-    #defining some params
-    num_epochs = 100 #you can go for more epochs, I am using a mac
+def trainAutoencoder(train_dataloader, test_dataloader):
+    num_epochs = 100
     batch_size = 128
 
     last_epoch = 0
     net = Autoencoder().to(device)
     if (last_epoch > 0):
         print("Continuing training of autoencoder_" + last_epoch + ".pt...")
-        net.load_state_dict(torch.load(PATH + 'autoencoder_' + str(last_epoch) + '.pt'))
+        net.load_state_dict(torch.load(AUTOENCODER_PATH + 'autoencoder_' + str(last_epoch) + '.pt'))
     else:
         print("Training from scratch...")
     distance = nn.MSELoss()
@@ -151,22 +188,71 @@ def trainModel(train_dataloader, test_dataloader):
             loss = distance(outputs, parsed_board)
             total_test_loss += loss.data.numpy()
         test_loss = total_test_loss / len(test_dataloader)
-        torch.save(net.state_dict(), PATH + 'autoencoder_' + str(epoch) + '.pt')
+        torch.save(net.state_dict(), AUTOENCODER_PATH + 'autoencoder_' + str(epoch) + '.pt')
 
+        print('epoch [{}/{}], train loss:{:.4f}, test_loss:{:.4f}'.format(epoch+1, num_epochs, loss.data.numpy(), test_loss))
+
+def trainDeepChess(train_dataloader, test_dataloader):
+    num_epochs = 10
+    batch_size = 128
+
+    autoencoder = Autoencoder()
+    autoencoder.load_state_dict(torch.load(AUTOENCODER_PATH + 'autoencoder_7.pt'))
+
+    evaluator = Evaluator()
+
+    net = Combined(autoencoder, evaluator)
+
+    distance = nn.MSELoss()
+    optimizer = torch.optim.Adam(net.parameters(),weight_decay=1e-5)
+
+    for epoch in range(num_epochs):
+        for data in train_dataloader:
+            parsed_board, outcome = data['parsed_board'].float(), data['outcome'].float()
+            print(parsed_board)
+
+            optimizer.zero_grad()
+            outputs = net(parsed_board)
+            #print("outputs:")
+            #print(outputs)
+
+            loss = distance(outputs, outcome)
+            loss.backward()
+            optimizer.step()
+        # At the end of the epoch, do a pass on the test set
+        total_test_loss = 0
+        for data in test_dataloader:
+            parsed_board, outcome = data['parsed_board'].float(), data['outcome'].float()
+
+            outputs = net(parsed_board)
+            loss = distance(outputs, outcome)
+            total_test_loss += loss.data.numpy()
+        test_loss = total_test_loss / len(test_dataloader)
 
         print('epoch [{}/{}], train loss:{:.4f}, test_loss:{:.4f}'.format(epoch+1, num_epochs, loss.data.numpy(), test_loss))
 
 
     # Save model so it can be loaded:
     # https://pytorch.org/tutorials/beginner/saving_loading_models.html
+    torch.save(net.state_dict(), DEEPCHESS_PATH + 'board_classifier.pt')
     #torch.save(net.state_dict(), PATH)
 
+def validateDeepChess(train_dataloader, test_dataloader):
+    idx = 0
+    for data in train_dataloader:
+        if idx > 5:
+            break
+        parsed_board, board, outcome = data['parsed_board'].float(), data['board'], data['outcome'].float()
+        print(board)
+        idx += 1
 
+        #optimizer.zero_grad()
+        #outputs = net(parsed_board)
+
+    # run model on dataloader and show results
 
 with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as handle:
     games_data = pickle.load(handle)
-    #print(games_data[:5])
-    #print(len(games_data))
 
     print("There are", len(games_data), "available for training.")
     training_size = 1000
@@ -190,12 +276,13 @@ with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as h
 
     train_dataloader = DataLoader(train_dataset, batch_size=4, shuffle=True)
     test_dataloader = DataLoader(test_dataset, batch_size=4, shuffle=True)
-    trainModel(train_dataloader, test_dataloader)
 
-    """for i in range(len(games_dataset)):
-        sample = games_dataset[i]
-        print(i, sample['board'].size(), sample['outcome'])
-
-        if i == 3:
-            break
-    """
+    #what_to_train = 'AUTOENCODER'
+    what_to_train = 'DEEPCHESS'
+    if what_to_train == 'AUTOENCODER':
+        print("Training Autoencoder...")
+        trainAutoencoder(train_dataloader, test_dataloader)
+    elif what_to_train == 'DEEPCHESS':
+        print("Training DeepChess...")
+        trainDeepChess(train_dataloader, test_dataloader)
+        validateDeepChess(train_dataloader, test_dataloader)
