@@ -214,10 +214,10 @@ def trainDeepChess(train_dataloader, test_dataloader):
 
             optimizer.zero_grad()
             outputs = net(parsed_board)
-            """print("outputs:")
+            #print("outputs:")
             print(outputs)
             print("actual outcome:")
-            print(outcome)"""
+            print(outcome)
 
             loss = distance(outputs, outcome)
             loss.backward()
