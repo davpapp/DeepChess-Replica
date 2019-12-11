@@ -249,7 +249,7 @@ def validateDeepChess(train_dataloader, test_dataloader):
         parsed_board, board_fen, outcome = data['parsed_board'].float(), data['board'], data['outcome'].float()
         # reconstruct board
         print(board_fen)
-        board = chess.Board(fen=board_fen)
+        board = chess.Board(fen=board_fen[0])
         print(board)
         idx += 1
 

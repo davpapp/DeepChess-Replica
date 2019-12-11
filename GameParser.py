@@ -75,7 +75,7 @@ def parse_game(game):
 data = []
 idx = 0
 while True:
-    if idx > 100:
+    if idx > 100000:
         break
     game = chess.pgn.read_game(pgn)
     if not game:
