@@ -7,8 +7,6 @@ pgn = open('games/2015-05.bare.[6004].pgn')
 PARSED_GAME_FILE = 'parsed_games/2015-05.bare.[6004].parsed.pickle'
 PARSED_FLATTENED_GAME_FILE = 'parsed_games/2015-05.bare.[6004].parsed_flattened.pickle'
 
-def autoencoder(board):
-    pass
 
 def boardToBitstring(board):
     """
@@ -55,6 +53,7 @@ def pieceToBitstring(piece):
 def parse_game(game):
     board = game.board()
     board_data = []
+    boards = []
     #print(game.mainline_moves())
     move_number = 1
     alg_move = ""
@@ -67,23 +66,33 @@ def parse_game(game):
         move_number += 1
         if move_number > 5 and move_number % 4 == 0 and 'x' not in alg_move:
             board_data.append(boardToBitstring(board))
-    return [board_data, game.headers['Result']]
+            boards.append(board.fen())
+    #print(boards)
+    return [board_data, boards, game.headers['Result']]
 
 
 
 data = []
+idx = 0
 while True:
+    if idx > 100:
+        break
     game = chess.pgn.read_game(pgn)
     if not game:
-       break
+        break
+    if game.headers['Result'] == '1/2-1/2':
+        print("Skipping tie...")
+        continue
     data.append(parse_game(game))
+    idx += 1
 
 # There's probably a cleaner way of doing this.
 flattened_data = []
 for game in data:
-    boards, outcome = game[0], game[1]
-    for board in boards:
-        flattened_data.append([board, outcome])
+    boards_data, boards, outcome = game[0], game[1], game[2]
+
+    for idx in range(0, len(boards_data)):
+        flattened_data.append([boards_data[idx], boards[idx], outcome])
 
 print(flattened_data[:5])
 

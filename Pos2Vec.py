@@ -30,19 +30,22 @@ print("Using device:", device)
 PATH = 'saved_models/'
 
 class GamesDataset(Dataset):
-    def __init__(self, boards, labels, transform=None):
+    def __init__(self, parsed_boards, boards, labels, transform=None):
+        self.parsed_boards = parsed_boards
         self.boards = boards
         self.labels = labels
         self.transform = transform
 
     def __len__(self):
-        return len(self.boards)
+        return len(self.parsed_boards)
 
     def __getitem__(self, idx):
+        parsed_board = self.parsed_boards[idx]
         board = self.boards[idx]
         outcome = self.labels[idx]
 
-        sample = {'board': board, 'outcome': outcome}
+        sample = {'parsed_board': parsed_board, 'board': board, 'outcome': outcome}
+        #print(sample)
         if self.transform:
             sample = self.transform(sample)
 
@@ -53,18 +56,18 @@ class BitstringToTensor(object):
     """ Converts a bitstring in sample to Tensors. """
 
     def __call__(self, sample):
-        board, outcome = sample['board'], sample['outcome']
+        parsed_board, board, outcome = sample['parsed_board'], sample['board'], sample['outcome']
 
         # Convert the bitstring to a numpy array:
         # https://stackoverflow.com/questions/29091869/convert-bitstring-string-of-1-and-0s-to-numpy-array
-        board_array = np.fromstring(board,'u1') - ord('0')
+        board_array = np.fromstring(parsed_board,'u1') - ord('0')
         board_tensor = torch.from_numpy(board_array)
 
         outcome_code = 0
         if (outcome == '1-0'):
             outcome_code = 0
-        elif (outcome == '1/2-1/2'):
-            outcome_code = 1
+        #elif (outcome == '1/2-1/2'):
+        #    outcome_code = 1
         elif (outcome == '0-1'):
             outcome_code = 2
         else:
@@ -72,7 +75,7 @@ class BitstringToTensor(object):
         outcome_tensor = torch.tensor(outcome_code)
         #print(outcome, ' -> ', outcome_code, " -> ", outcome_tensor)
 
-        return {'board': board_tensor, 'outcome': outcome_tensor}
+        return {'parsed_board': board_tensor, 'board': board, 'outcome': outcome_tensor}
 
 
 
@@ -114,32 +117,38 @@ def trainModel(train_dataloader, test_dataloader):
     num_epochs = 100 #you can go for more epochs, I am using a mac
     batch_size = 128
 
+    last_epoch = 0
     net = Autoencoder().to(device)
+    if (last_epoch > 0):
+        print("Continuing training of autoencoder_" + last_epoch + ".pt...")
+        net.load_state_dict(torch.load(PATH + 'autoencoder_' + str(last_epoch) + '.pt'))
+    else:
+        print("Training from scratch...")
     distance = nn.MSELoss()
     optimizer = torch.optim.Adam(net.parameters(),weight_decay=1e-5)
 
-    for epoch in range(num_epochs):
+    for epoch in range(last_epoch + 1, num_epochs + last_epoch):
         for data in train_dataloader:
-            board, outcome = data['board'].float().to(device), data['outcome'].float().to(device)
-            #print(board)
+            parsed_board, outcome = data['parsed_board'].float().to(device), data['outcome'].float().to(device)
+            #print(parsed_board)
             #print(outcome)
             #print('\n\n')
 
             optimizer.zero_grad()
-            outputs = net(board)
+            outputs = net(parsed_board)
             #print("outputs:")
             #print(outputs)
 
-            loss = distance(outputs, board)
+            loss = distance(outputs, parsed_board)
             loss.backward()
             optimizer.step()
         # At the end of the epoch, do a pass on the test set
         total_test_loss = 0
         for data in test_dataloader:
-            board, outcome = data['board'].float().to(device), data['outcome'].float().to(device)
+            parsed_board, outcome = data['parsed_board'].float().to(device), data['outcome'].float().to(device)
 
-            outputs = net(board)
-            loss = distance(outputs, board)
+            outputs = net(parsed_board)
+            loss = distance(outputs, parsed_board)
             total_test_loss += loss.data.numpy()
         test_loss = total_test_loss / len(test_dataloader)
         torch.save(net.state_dict(), PATH + 'autoencoder_' + str(epoch) + '.pt')
@@ -160,15 +169,17 @@ with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as h
     #print(len(games_data))
 
     print("There are", len(games_data), "available for training.")
-    training_size = 100000
-    games = [game[0] for game in games_data][:training_size]
-    outcomes = [game[1] for game in games_data][:training_size]
+    training_size = 1000
+    parsed_boards = [game[0] for game in games_data][:training_size]
+    boards = [game[1] for game in games_data][:training_size]
+    outcomes = [game[2] for game in games_data][:training_size]
     #print(games[:2])
     #print(labels[:60])
-    print("Running training on", len(games), "games.")
+    print("Running training on", len(parsed_boards), "games.")
 
 
-    games_dataset = GamesDataset(boards=games,
+    games_dataset = GamesDataset(parsed_boards=parsed_boards,
+                                boards=boards,
                                 labels=outcomes,
                                 transform=transforms.Compose([BitstringToTensor()]))
     train_size = int(0.75 * len(games_dataset))

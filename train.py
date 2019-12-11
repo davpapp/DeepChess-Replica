@@ -118,7 +118,7 @@ class Combined(nn.Module):
         self.modelA = modelA
         self.modelB = modelB
         self.classifier = nn.Linear(2, 1)
-        
+
     def forward(self, x):
         x = self.modelA(x)
         x = self.modelB(x)
@@ -130,15 +130,15 @@ def trainModel(train_dataloader, test_dataloader):
     num_epochs = 10 #you can go for more epochs, I am using a mac
     batch_size = 128
 
-    print('training model')
+    print('Training model...')
 
     autoenc = Autoencoder()
     #    Load state dicts
-    autoenc.load_state_dict(torch.load('saved_models/autoencoder.pt'))
+    autoenc.load_state_dict(torch.load('saved_models/autoencoder_26.pt'))
 
-    evaluat = Evaluator()
+    evaluate = Evaluator()
 
-    net = Combined(autoenc, evaluat)
+    net = Combined(autoenc, evaluate)
 
     #net.load_state_dict(torch.load('saved_models/autoencoder.pt'))
     distance = nn.MSELoss()
@@ -176,9 +176,15 @@ def trainModel(train_dataloader, test_dataloader):
 
     # Save model so it can be loaded:
     # https://pytorch.org/tutorials/beginner/saving_loading_models.html
-    PATH = 'saved_models/board_classifier.pt'
-    torch.save(net.state_dict(), PATH)
-    torch.save(net.state_dict(), PATH)
+    path = 'saved_models/board_classifier.pt'
+    torch.save(net.state_dict(), path)
+    #torch.save(net.state_dict(), PATH)
+
+def validateModel():
+    # load board_classifier
+    # Define some boards
+    # convert boards to Dataset then dataloader
+    # run model on dataloader and show results
 
 
 with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as handle:
@@ -209,3 +215,4 @@ with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as h
     test_dataloader = DataLoader(test_dataset, batch_size=2, shuffle=True)
     print('created test dataloader')
     trainModel(train_dataloader, test_dataloader)
+    validateModel()
