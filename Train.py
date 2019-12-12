@@ -49,7 +49,7 @@ class GamesDataset(Dataset):
         outcome = self.labels[idx]
 
         sample = {'parsed_board': parsed_board, 'board': board, 'outcome': outcome}
-        #print(sample)
+
         if self.transform:
             sample = self.transform(sample)
 
@@ -70,10 +70,8 @@ class BitstringToTensor(object):
         outcome_code = 0
         if (outcome == '1-0'):
             outcome_code = 0
-        #elif (outcome == '1/2-1/2'):
-        #    outcome_code = 1
         elif (outcome == '0-1'):
-            outcome_code = 2
+            outcome_code = 1
         else:
             raise Exception('Unexpected outcome.')
         outcome_tensor = torch.tensor(outcome_code)
@@ -144,14 +142,14 @@ class Combined(nn.Module):
         self.classifier = nn.Linear(2, 1)
 
     def forward(self, x):
-        x = self.modelA(x)
-        x = self.modelB(x)
+        encoded, decoded = self.modelA(x)
+        x = self.modelB(encoded)
         x = self.classifier(x)
         return x
 
 
 def trainAutoencoder(train_dataloader, test_dataloader):
-    num_epochs = 5
+    num_epochs = 10
     batch_size = 128
 
     last_epoch = 0
@@ -181,19 +179,15 @@ def trainAutoencoder(train_dataloader, test_dataloader):
         total_test_loss = 0
         for data in test_dataloader:
             parsed_board, outcome = data['parsed_board'].float().to(device), data['outcome'].float().to(device)
-            #encoder_output = encoder_net(parsed_board)
-            #outputs = decoder_net(encoder_output)
             encoded, decoded = autoencoder(parsed_board)
             loss = distance(parsed_board, decoded)
             total_test_loss += loss.data.numpy()
 
-
         test_loss = total_test_loss / len(test_dataloader)
-        writer.add_scalar('test loss', test_loss, epoch)
         writer.add_scalar('training loss', loss.data.numpy(), epoch)
+        writer.add_scalar('test loss', test_loss, epoch)
+
         torch.save(autoencoder.state_dict(), AUTOENCODER_PATH + 'autoencoder_' + str(epoch) + '.pt')
-        #torch.save(encoder_net.state_dict(), AUTOENCODER_PATH + 'autoencoder_' + str(epoch) + '.pt')
-        #torch.save(encoder_net.state_dict(), AUTOENCODER_PATH + 'autoencoder_' + str(epoch) + '.pt')
 
         print('epoch [{}/{}], train loss:{:.4f}, test_loss:{:.4f}'.format(epoch+1, num_epochs, loss.data.numpy(), test_loss))
 
@@ -202,12 +196,11 @@ def trainAutoencoder(train_dataloader, test_dataloader):
     data = dataiter.next()
     parsed_board, outcome = data['parsed_board'].float(), data['outcome'].float()
     writer.add_graph(autoencoder, parsed_board)
-    #writer.add_graph(decoder_net, encoder_net(parsed_board))
     writer.close()
 
 
 def trainDeepChess(train_dataloader, test_dataloader):
-    num_epochs = 10
+    num_epochs = 5
     batch_size = 128
 
     autoencoder = Autoencoder()
@@ -223,14 +216,9 @@ def trainDeepChess(train_dataloader, test_dataloader):
     for epoch in range(num_epochs):
         for data in train_dataloader:
             parsed_board, outcome = data['parsed_board'].float(), data['outcome'].float()
-            #print(parsed_board)
 
             optimizer.zero_grad()
             outputs = net(parsed_board)
-            #print("outputs:")
-            """print(outputs)
-            print("actual outcome:")
-            print(outcome)"""
 
             loss = distance(outputs, outcome)
             loss.backward()
@@ -247,16 +235,13 @@ def trainDeepChess(train_dataloader, test_dataloader):
 
         print('epoch [{}/{}], train loss:{:.4f}, test_loss:{:.4f}'.format(epoch+1, num_epochs, loss.data.numpy(), test_loss))
 
-
-    # Save model so it can be loaded:
-    # https://pytorch.org/tutorials/beginner/saving_loading_models.html
+    # Write to TensorBoard for visualization purposes
     dataiter = iter(train_dataloader)
     data = dataiter.next()
     parsed_board, outcome = data['parsed_board'].float(), data['outcome'].float()
-    #writer.add_graph(net, parsed_board)
-    #writer.close()
+    writer.add_graph(net, parsed_board)
     torch.save(net.state_dict(), DEEPCHESS_PATH + 'board_classifier.pt')
-    #torch.save(net.state_dict(), PATH)
+    writer.close()
 
 def validateDeepChess(train_dataloader, test_dataloader):
     idx = 0
@@ -280,7 +265,7 @@ with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as h
     games_data = pickle.load(handle)
 
     print("There are", len(games_data), "available for training.")
-    training_size = 1000
+    training_size = 5000
     parsed_boards = [game[0] for game in games_data][:training_size]
     boards = [game[1] for game in games_data][:training_size]
     outcomes = [game[2] for game in games_data][:training_size]
