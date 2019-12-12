@@ -119,9 +119,13 @@ class Combined(nn.Module):
         self.modelA = modelA
         self.modelB = modelB
         self.classifier = nn.Linear(2, 1)
+        #self.softmax = nn.Softmax(2)
 
     def forward(self, x):
         encoded, decoded = self.modelA(x)
         x = self.modelB(encoded)
         x = self.classifier(x)
-        return x
+        
+        # We need to do x[0] instead of x b/c for some reason,
+        # x has shape [1, 1] (as in, it's a nested list like [[0.005]])
+        return x[0]

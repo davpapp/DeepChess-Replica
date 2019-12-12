@@ -121,6 +121,12 @@ def trainDeepChess(train_dataloader, test_dataloader):
             parsed_board, outcome = data['parsed_board'].float(), data['outcome'].float()
 
             outputs = net(parsed_board)
+
+            """print(data['board'])
+            print("Actual outcome:", outcome)
+            print("Predicted outcome:", outputs)
+            print('\n')"""
+
             loss = distance(outputs, outcome)
             total_test_loss += loss.data.numpy()
         test_loss = total_test_loss / len(test_dataloader)
@@ -140,7 +146,7 @@ def validateDeepChess(train_dataloader, test_dataloader):
     Pick a random board and run DeepChess on it to help visualize results.
     """
     pass
-    """idx = 0
+    idx = 0
     for data in train_dataloader:
         if idx > 5:
             break
@@ -150,7 +156,7 @@ def validateDeepChess(train_dataloader, test_dataloader):
         print(board_fen)
         board = chess.Board(fen=board_fen[0])
         print(board)
-        idx += 1"""
+        idx += 1
 
 
 
