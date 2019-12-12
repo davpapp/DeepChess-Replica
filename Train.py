@@ -81,51 +81,6 @@ class BitstringToTensor(object):
 
         return {'parsed_board': board_tensor, 'board': board, 'outcome': outcome_tensor}
 
-
-class Encoder(nn.Module):
-    def __init__(self):
-        super(Encoder, self).__init__()
-
-
-        self.lin1 = nn.Linear(773, 600)
-        self.relu = nn.ReLU(True)
-        self.lin2 = nn.Linear(600, 400)
-        self.lin3 = nn.Linear(400, 200)
-        self.lin4 = nn.Linear(200, 100)
-
-    def forward(self, x):
-        x = self.lin1(x)
-        x = self.relu(x)
-        x = self.lin2(x)
-        x = self.relu(x)
-        x = self.lin3(x)
-        x = self.relu(x)
-        x = self.lin4(x)
-        x = self.relu(x)
-        return x
-
-
-class Decoder(nn.Module):
-    def __init__(self):
-        super(Decoder, self).__init__()
-
-        self.lin1 = nn.Linear(100, 200)
-        self.relu = nn.ReLU(True)
-        self.lin2 = nn.Linear(200, 400)
-        self.lin3 = nn.Linear(400, 600)
-        self.lin4 = nn.Linear(600, 773)
-
-    def forward(self, x):
-        x = self.lin1(x)
-        x = self.relu(x)
-        x = self.lin2(x)
-        x = self.relu(x)
-        x = self.lin3(x)
-        x = self.relu(x)
-        x = self.lin4(x)
-        x = self.relu(x)
-        return x
-
 class Autoencoder(nn.Module):
     def __init__(self):
         super(Autoencoder, self).__init__()
@@ -140,7 +95,7 @@ class Autoencoder(nn.Module):
             nn.Linear(200, 100),
             nn.ReLU(True),
         )
-        """self.decoder = nn.Sequential(
+        self.decoder = nn.Sequential(
             nn.Linear(100, 200),
             nn.ReLU(True),
             nn.Linear(200, 400),
@@ -149,13 +104,13 @@ class Autoencoder(nn.Module):
             nn.ReLU(True),
             nn.Linear(600, 773),
             nn.Sigmoid()
-        )"""
+        )
 
     def forward(self, x):
-        x = self.encoder(x)
-        # Uncomment the line below if training
-        #x = self.decoder(x)
-        return x
+        encoded = self.encoder(x)
+        decoded = self.decoder(encoded)
+        return encoded, decoded
+
 
 class Evaluator(nn.Module):
     def __init__(self):
@@ -196,61 +151,58 @@ class Combined(nn.Module):
 
 
 def trainAutoencoder(train_dataloader, test_dataloader):
-    num_epochs = 2
+    num_epochs = 5
     batch_size = 128
 
     last_epoch = 0
-    encoder_net = Encoder().to(device)
-    decoder_net = Decoder().to(device)
+    autoencoder = Autoencoder().to(device)
 
     if (last_epoch > 0):
         print("Continuing training of autoencoder_" + last_epoch + ".pt...")
-        net.load_state_dict(torch.load(AUTOENCODER_PATH + 'autoencoder_' + str(last_epoch) + '.pt'))
+        autoencoder.load_state_dict(torch.load(AUTOENCODER_PATH + 'autoencoder_' + str(last_epoch) + '.pt'))
     else:
         print("Training from scratch...")
 
     distance = nn.MSELoss()
-    encoder_optimizer = torch.optim.Adam(encoder_net.parameters(),weight_decay=1e-5)
-    decoder_optimizer = torch.optim.Adam(decoder_net.parameters(),weight_decay=1e-5)
+    optimizer = torch.optim.Adam(autoencoder.parameters(),weight_decay=1e-5)
+
 
     for epoch in range(last_epoch + 1, num_epochs + last_epoch):
         for data in train_dataloader:
             parsed_board, outcome = data['parsed_board'].float().to(device), data['outcome'].float().to(device)
-            #print(parsed_board)
-            #print(outcome)
-            #print('\n\n')
-            encoder_optimizer.zero_grad()
-            decoder_optimizer.zero_grad()
 
-            encoder_output = encoder_net(parsed_board)
-            decoder_output = decoder_net(encoder_output)
-
-            #print("outputs:")
-            #print(outputs)
-
-            loss = distance(parsed_board, decoder_output)
+            optimizer.zero_grad()
+            encoded, decoded = autoencoder(parsed_board)
+            loss = distance(parsed_board, decoded)
             loss.backward()
-            encoder_optimizer.step()
-            decoder_optimizer.step()
+            optimizer.step()
+
         # At the end of the epoch, do a pass on the test set
         total_test_loss = 0
-        """for data in test_dataloader:
+        for data in test_dataloader:
             parsed_board, outcome = data['parsed_board'].float().to(device), data['outcome'].float().to(device)
+            #encoder_output = encoder_net(parsed_board)
+            #outputs = decoder_net(encoder_output)
+            encoded, decoded = autoencoder(parsed_board)
+            loss = distance(parsed_board, decoded)
+            total_test_loss += loss.data.numpy()
 
-            outputs = net(parsed_board)
-            loss = distance(outputs, parsed_board)
-            total_test_loss += loss.data.numpy()"""
+
         test_loss = total_test_loss / len(test_dataloader)
-        #torch.save(net.state_dict(), AUTOENCODER_PATH + 'autoencoder_' + str(epoch) + '.pt')
+        writer.add_scalar('test loss', test_loss, epoch)
+        writer.add_scalar('training loss', loss.data.numpy(), epoch)
+        torch.save(autoencoder.state_dict(), AUTOENCODER_PATH + 'autoencoder_' + str(epoch) + '.pt')
+        #torch.save(encoder_net.state_dict(), AUTOENCODER_PATH + 'autoencoder_' + str(epoch) + '.pt')
+        #torch.save(encoder_net.state_dict(), AUTOENCODER_PATH + 'autoencoder_' + str(epoch) + '.pt')
 
         print('epoch [{}/{}], train loss:{:.4f}, test_loss:{:.4f}'.format(epoch+1, num_epochs, loss.data.numpy(), test_loss))
 
-
+    # Write to TensorBoard for visualization purposes
     dataiter = iter(train_dataloader)
     data = dataiter.next()
     parsed_board, outcome = data['parsed_board'].float(), data['outcome'].float()
-    writer.add_graph(encoder_net, parsed_board)
-    #writer.add_graph(encoder_net, parsed_board)
+    writer.add_graph(autoencoder, parsed_board)
+    #writer.add_graph(decoder_net, encoder_net(parsed_board))
     writer.close()
 
 
@@ -276,15 +228,9 @@ def trainDeepChess(train_dataloader, test_dataloader):
             optimizer.zero_grad()
             outputs = net(parsed_board)
             #print("outputs:")
-<<<<<<< HEAD
             """print(outputs)
             print("actual outcome:")
             print(outcome)"""
-=======
-            #print(outputs)
-            #print("actual outcome:")
-            #print(outcome)
->>>>>>> abc29248e33323bc5926c68400d27cc81de1009b
 
             loss = distance(outputs, outcome)
             loss.backward()
@@ -334,7 +280,7 @@ with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as h
     games_data = pickle.load(handle)
 
     print("There are", len(games_data), "available for training.")
-    training_size = 80000
+    training_size = 1000
     parsed_boards = [game[0] for game in games_data][:training_size]
     boards = [game[1] for game in games_data][:training_size]
     outcomes = [game[2] for game in games_data][:training_size]
