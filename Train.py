@@ -141,21 +141,27 @@ def trainDeepChess(train_dataloader, test_dataloader):
     torch.save(net.state_dict(), DEEPCHESS_PATH + 'board_classifier.pt')
     writer.close()
 
-def validateDeepChess(train_dataloader, test_dataloader):
+    validateDeepChess(net, test_dataloader)
+
+def validateDeepChess(net, test_dataloader):
     """
     Pick a random board and run DeepChess on it to help visualize results.
     """
     pass
     idx = 0
-    for data in train_dataloader:
+    for data in test_dataloader:
         if idx > 5:
             break
 
         parsed_board, board_fen, outcome = data['parsed_board'].float(), data['board'], data['outcome'].float()
         # reconstruct board
-        print(board_fen)
+        print('\n\n')
+        print("FEN representation of board:", board_fen)
         board = chess.Board(fen=board_fen[0])
         print(board)
+
+        output = net(parsed_board)
+        print("Probability of White winning:", output, ". Actual outcome:", outcome)
         idx += 1
 
 
@@ -194,4 +200,3 @@ with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as h
     elif what_to_train == 'DEEPCHESS':
         print("Training DeepChess...\n\n")
         trainDeepChess(train_dataloader, test_dataloader)
-        validateDeepChess(train_dataloader, test_dataloader)
