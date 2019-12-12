@@ -194,7 +194,7 @@ def trainAutoencoder(train_dataloader, test_dataloader):
         print('epoch [{}/{}], train loss:{:.4f}, test_loss:{:.4f}'.format(epoch+1, num_epochs, loss.data.numpy(), test_loss))
 
 def trainDeepChess(train_dataloader, test_dataloader):
-    num_epochs = 2
+    num_epochs = 10
     batch_size = 128
 
     autoencoder = Autoencoder()
@@ -215,9 +215,9 @@ def trainDeepChess(train_dataloader, test_dataloader):
             optimizer.zero_grad()
             outputs = net(parsed_board)
             #print("outputs:")
-            print(outputs)
-            print("actual outcome:")
-            print(outcome)
+            #print(outputs)
+            #print("actual outcome:")
+            #print(outcome)
 
             loss = distance(outputs, outcome)
             loss.backward()
@@ -262,7 +262,7 @@ with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as h
     games_data = pickle.load(handle)
 
     print("There are", len(games_data), "available for training.")
-    training_size = 1000
+    training_size = 80000
     parsed_boards = [game[0] for game in games_data][:training_size]
     boards = [game[1] for game in games_data][:training_size]
     outcomes = [game[2] for game in games_data][:training_size]
