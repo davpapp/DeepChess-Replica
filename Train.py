@@ -13,6 +13,12 @@ from torchvision.utils import save_image
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
+from Models import GamesDataset
+from Models import BitstringToTensor
+from Models import Autoencoder
+from Models import Evaluator
+from Models import Combined
+
 print("Cuda available: ", torch.cuda.is_available())
 if torch.cuda.is_available():
   dev = "cuda:0"
@@ -32,120 +38,6 @@ AUTOENCODER_PATH = 'saved_models/autoencoder/'
 DEEPCHESS_PATH = 'saved_models/deepchess/'
 
 writer = SummaryWriter()
-
-class GamesDataset(Dataset):
-    def __init__(self, parsed_boards, boards, labels, transform=None):
-        self.parsed_boards = parsed_boards
-        self.boards = boards
-        self.labels = labels
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.parsed_boards)
-
-    def __getitem__(self, idx):
-        parsed_board = self.parsed_boards[idx]
-        board = self.boards[idx]
-        outcome = self.labels[idx]
-
-        sample = {'parsed_board': parsed_board, 'board': board, 'outcome': outcome}
-
-        if self.transform:
-            sample = self.transform(sample)
-
-        return sample
-
-
-class BitstringToTensor(object):
-    """ Converts a bitstring in sample to Tensors. """
-
-    def __call__(self, sample):
-        parsed_board, board, outcome = sample['parsed_board'], sample['board'], sample['outcome']
-
-        # Convert the bitstring to a numpy array:
-        # https://stackoverflow.com/questions/29091869/convert-bitstring-string-of-1-and-0s-to-numpy-array
-        board_array = np.fromstring(parsed_board,'u1') - ord('0')
-        board_tensor = torch.from_numpy(board_array)
-
-        outcome_code = 0
-        if (outcome == '1-0'):
-            outcome_code = 0
-        elif (outcome == '0-1'):
-            outcome_code = 1
-        else:
-            raise Exception('Unexpected outcome.')
-        outcome_tensor = torch.tensor(outcome_code)
-        #print(outcome, ' -> ', outcome_code, " -> ", outcome_tensor)
-
-        return {'parsed_board': board_tensor, 'board': board, 'outcome': outcome_tensor}
-
-class Autoencoder(nn.Module):
-    def __init__(self):
-        super(Autoencoder, self).__init__()
-
-        self.encoder = nn.Sequential(
-            nn.Linear(773, 600),
-            nn.ReLU(True),
-            nn.Linear(600, 400),
-            nn.ReLU(True),
-            nn.Linear(400, 200),
-            nn.ReLU(True),
-            nn.Linear(200, 100),
-            nn.ReLU(True),
-        )
-        self.decoder = nn.Sequential(
-            nn.Linear(100, 200),
-            nn.ReLU(True),
-            nn.Linear(200, 400),
-            nn.ReLU(True),
-            nn.Linear(400, 600),
-            nn.ReLU(True),
-            nn.Linear(600, 773),
-            nn.Sigmoid()
-        )
-
-    def forward(self, x):
-        encoded = self.encoder(x)
-        decoded = self.decoder(encoded)
-        return encoded, decoded
-
-
-class Evaluator(nn.Module):
-    def __init__(self):
-        super(Evaluator, self).__init__()
-        self.connect = nn.Linear(100, 400)
-        self.lin1 = nn.Linear(400, 200)
-        self.lin2 = nn.Linear(200, 100)
-        self.lin3 = nn.Linear(100, 2)
-
-    def forward(self, x):
-        x = self.connect(x)
-        x = self.lin1(x)
-        x = self.lin2(x)
-        x = self.lin3(x)
-        return x
-
-    # The loss function (which we chose to include as a method of the class, but doesn't need to be)
-    # returns the loss and optimizer used by the model
-    def get_loss(self, learning_rate):
-        # Loss function
-        loss = nn.CrossEntropyLoss()
-        # Optimizer, self.parameters() returns all the Pytorch operations that are attributes of the class
-        optimizer = optim.Adam(self.parameters(), lr=learning_rate)
-        return loss, optimizer
-
-class Combined(nn.Module):
-    def __init__(self, modelA, modelB):
-        super(Combined, self).__init__()
-        self.modelA = modelA
-        self.modelB = modelB
-        self.classifier = nn.Linear(2, 1)
-
-    def forward(self, x):
-        encoded, decoded = self.modelA(x)
-        x = self.modelB(encoded)
-        x = self.classifier(x)
-        return x
 
 
 def trainAutoencoder(train_dataloader, test_dataloader):
@@ -200,11 +92,11 @@ def trainAutoencoder(train_dataloader, test_dataloader):
 
 
 def trainDeepChess(train_dataloader, test_dataloader):
-    num_epochs = 5
+    num_epochs = 3
     batch_size = 128
 
     autoencoder = Autoencoder()
-    autoencoder.load_state_dict(torch.load(AUTOENCODER_PATH + 'autoencoder_7.pt'))
+    autoencoder.load_state_dict(torch.load(AUTOENCODER_PATH + 'autoencoder_9.pt'))
 
     evaluator = Evaluator()
 
@@ -244,7 +136,11 @@ def trainDeepChess(train_dataloader, test_dataloader):
     writer.close()
 
 def validateDeepChess(train_dataloader, test_dataloader):
-    idx = 0
+    """
+    Pick a random board and run DeepChess on it to help visualize results.
+    """
+    pass
+    """idx = 0
     for data in train_dataloader:
         if idx > 5:
             break
@@ -254,18 +150,15 @@ def validateDeepChess(train_dataloader, test_dataloader):
         print(board_fen)
         board = chess.Board(fen=board_fen[0])
         print(board)
-        idx += 1
+        idx += 1"""
 
-        #optimizer.zero_grad()
-        #outputs = net(parsed_board)
 
-    # run model on dataloader and show results
 
 with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as handle:
     games_data = pickle.load(handle)
 
     print("There are", len(games_data), "available for training.")
-    training_size = 5000
+    training_size = 500
     parsed_boards = [game[0] for game in games_data][:training_size]
     boards = [game[1] for game in games_data][:training_size]
     outcomes = [game[2] for game in games_data][:training_size]
@@ -287,8 +180,8 @@ with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as h
     train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=True)
     test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=True)
 
-    what_to_train = 'AUTOENCODER'
-    #what_to_train = 'DEEPCHESS'
+    #what_to_train = 'AUTOENCODER'
+    what_to_train = 'DEEPCHESS'
     if what_to_train == 'AUTOENCODER':
         print("Training Autoencoder...\n\n")
         trainAutoencoder(train_dataloader, test_dataloader)

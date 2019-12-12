@@ -13,12 +13,12 @@ from torch.autograd import Variable
 from torchvision.utils import save_image
 from torch.utils.data import Dataset, DataLoader
 
-from Train import Autoencoder
-from Train import Evaluator
-from Train import Combined
+from Models import Autoencoder
+from Models import Evaluator
+from Models import Combined
 
-from GameParser import boardToBitstring
-from GameParser import pieceToBitstring
+from Helpers import boardToBitstring
+from Helpers import pieceToBitstring
 
 
 DEEPCHESS_PATH = 'saved_models/deepchess/'
