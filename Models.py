@@ -92,7 +92,7 @@ class Autoencoder(nn.Module):
 class Evaluator(nn.Module):
     def __init__(self):
         super(Evaluator, self).__init__()
-        self.connect = nn.Linear(773, 400)
+        self.connect = nn.Linear(100, 400)
         self.lin1 = nn.Linear(400, 200)
         self.lin2 = nn.Linear(200, 100)
         self.lin3 = nn.Linear(100, 2)
@@ -122,8 +122,8 @@ class Combined(nn.Module):
         #self.softmax = nn.Softmax(2)
 
     def forward(self, x):
-        #encoded, decoded = self.modelA(x)
-        x = self.modelB(x)
+        encoded, decoded = self.modelA(x)
+        x = self.modelB(encoded)
         x = self.classifier(x)
         
         # We need to do x[0] instead of x b/c for some reason,
