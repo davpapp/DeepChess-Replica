@@ -172,7 +172,7 @@ with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as h
     games_data = pickle.load(handle)
 
     print("There are", len(games_data), "available for training.")
-    training_size = 50000
+    training_size = 120000
     parsed_boards = [game[0] for game in games_data][:training_size]
     boards = [game[1] for game in games_data][:training_size]
     outcomes = [game[2] for game in games_data][:training_size]
@@ -185,7 +185,7 @@ with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as h
                                 boards=boards,
                                 labels=outcomes,
                                 transform=transforms.Compose([BitstringToTensor()]))
-    train_size = int(0.75 * len(games_dataset))
+    train_size = int(0.9 * len(games_dataset))
     test_size = len(games_dataset) - train_size
     train_dataset, test_dataset = torch.utils.data.random_split(games_dataset, [train_size, test_size])
     print("Training set size:", train_size)
