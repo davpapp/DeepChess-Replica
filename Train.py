@@ -41,7 +41,7 @@ writer = SummaryWriter()
 
 
 def trainAutoencoder(train_dataloader, test_dataloader):
-    num_epochs = 10
+    num_epochs = 100
     batch_size = 128
 
     last_epoch = 0
@@ -101,7 +101,7 @@ def trainDeepChess(train_dataloader, test_dataloader):
     evaluator = Evaluator()
 
     net = Combined(autoencoder, evaluator).to(device)
-    
+
     distance = nn.MSELoss()
     optimizer = torch.optim.Adam(net.parameters(),weight_decay=1e-5)
 
@@ -131,6 +131,8 @@ def trainDeepChess(train_dataloader, test_dataloader):
             total_test_loss += loss.data.numpy()
         test_loss = total_test_loss / len(test_dataloader)
 
+        torch.save(autoencoder.state_dict(), DEEPCHESS_PATH + 'deepchess_' + str(epoch) + '.pt')
+
         print('epoch [{}/{}], train loss:{:.4f}, test_loss:{:.4f}'.format(epoch+1, num_epochs, loss.data.numpy(), test_loss))
 
     # Write to TensorBoard for visualization purposes
@@ -138,7 +140,7 @@ def trainDeepChess(train_dataloader, test_dataloader):
     data = dataiter.next()
     parsed_board, outcome = data['parsed_board'].float(), data['outcome'].float()
     writer.add_graph(net, parsed_board)
-    torch.save(net.state_dict(), DEEPCHESS_PATH + 'board_classifier.pt')
+    #torch.save(net.state_dict(), DEEPCHESS_PATH + 'board_classifier.pt')
     writer.close()
 
     validateDeepChess(net, test_dataloader)
