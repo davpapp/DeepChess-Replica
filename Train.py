@@ -107,7 +107,7 @@ def trainDeepChess(train_dataloader, test_dataloader):
 
     for epoch in range(num_epochs):
         for data in train_dataloader:
-            parsed_board, outcome = data['parsed_board'].float(), data['outcome'].float()
+            parsed_board, outcome = data['parsed_board'].float().to(device), data['outcome'].float().to(device)
 
             optimizer.zero_grad()
             outputs = net(parsed_board)
@@ -118,7 +118,7 @@ def trainDeepChess(train_dataloader, test_dataloader):
         # At the end of the epoch, do a pass on the test set
         total_test_loss = 0
         for data in test_dataloader:
-            parsed_board, outcome = data['parsed_board'].float(), data['outcome'].float()
+            parsed_board, outcome = data['parsed_board'].float().to(device), data['outcome'].float().to(device)
 
             outputs = net(parsed_board)
 
@@ -128,12 +128,12 @@ def trainDeepChess(train_dataloader, test_dataloader):
             print('\n')"""
 
             loss = distance(outputs, outcome)
-            total_test_loss += loss.data.numpy()
+            total_test_loss += loss.data.cpu().numpy()
         test_loss = total_test_loss / len(test_dataloader)
 
         torch.save(autoencoder.state_dict(), DEEPCHESS_PATH + 'deepchess_' + str(epoch) + '.pt')
 
-        print('epoch [{}/{}], train loss:{:.4f}, test_loss:{:.4f}'.format(epoch+1, num_epochs, loss.data.numpy(), test_loss))
+        print('epoch [{}/{}], train loss:{:.4f}, test_loss:{:.4f}'.format(epoch+1, num_epochs, loss.data.cpu().numpy(), test_loss))
 
     # Write to TensorBoard for visualization purposes
     dataiter = iter(train_dataloader)
