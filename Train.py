@@ -92,7 +92,7 @@ def trainAutoencoder(train_dataloader, test_dataloader):
 
 
 def trainDeepChess(train_dataloader, test_dataloader):
-    num_epochs = 10
+    num_epochs = 2
     batch_size = 128
 
     autoencoder = Autoencoder()
@@ -138,7 +138,7 @@ def trainDeepChess(train_dataloader, test_dataloader):
     # Write to TensorBoard for visualization purposes
     dataiter = iter(train_dataloader)
     data = dataiter.next()
-    parsed_board, outcome = data['parsed_board'].float(), data['outcome'].float()
+    parsed_board, outcome = data['parsed_board'].float().to(device), data['outcome'].float().to(device)
     writer.add_graph(net, parsed_board)
     #torch.save(net.state_dict(), DEEPCHESS_PATH + 'board_classifier.pt')
     writer.close()
