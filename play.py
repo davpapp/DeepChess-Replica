@@ -28,7 +28,7 @@ def find_best_move(board, white):
     best_score = -1
     best_move = ""
     for move in board.legal_moves:
-        #print(move)
+        
         #print(board)
         board.push(move)
         board_score = eval_board(board, white)
@@ -36,7 +36,8 @@ def find_best_move(board, white):
             best_score = board_score
             best_move = move
         board.pop()
-
+    print(chess.Move.from_uci("a8a1"))
+    print(move)
     return best_move
 
 def eval_board(board, white):
@@ -76,5 +77,8 @@ for i in range(10):
     move = find_best_move(board, white)
     print(move)
     board.push(move)
-    white = not white
+    if white:
+        white = False
+    else:
+        white = True
     print(board)

@@ -22,7 +22,7 @@ def parse_game(game):
             break
         board.push(move)
         move_number += 1
-        if move_number > 5 and move_number % 5 == 0 and 'x' not in alg_move:
+        if move_number % 3 == 0:# and 'x' not in alg_move:
             board_data.append(boardToBitstring(board))
             boards.append(board.fen())
     #print(boards)
