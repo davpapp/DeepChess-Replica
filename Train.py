@@ -41,7 +41,7 @@ writer = SummaryWriter()
 
 
 def trainAutoencoder(train_dataloader, test_dataloader):
-    num_epochs = 10
+    num_epochs = 100
     batch_size = 128
 
     last_epoch = 0
@@ -92,11 +92,11 @@ def trainAutoencoder(train_dataloader, test_dataloader):
 
 
 def trainDeepChess(train_dataloader, test_dataloader):
-    num_epochs = 3
+    num_epochs = 5
     batch_size = 128
 
     autoencoder = Autoencoder()
-    autoencoder.load_state_dict(torch.load(AUTOENCODER_PATH + 'autoencoder_9.pt'))
+    autoencoder.load_state_dict(torch.load(AUTOENCODER_PATH + 'autoencoder_23.pt'))
 
     evaluator = Evaluator()
 
@@ -131,6 +131,8 @@ def trainDeepChess(train_dataloader, test_dataloader):
             total_test_loss += loss.data.numpy()
         test_loss = total_test_loss / len(test_dataloader)
 
+        torch.save(autoencoder.state_dict(), DEEPCHESS_PATH + 'deepchess_' + str(epoch) + '.pt')
+
         print('epoch [{}/{}], train loss:{:.4f}, test_loss:{:.4f}'.format(epoch+1, num_epochs, loss.data.numpy(), test_loss))
 
     # Write to TensorBoard for visualization purposes
@@ -138,7 +140,7 @@ def trainDeepChess(train_dataloader, test_dataloader):
     data = dataiter.next()
     parsed_board, outcome = data['parsed_board'].float(), data['outcome'].float()
     writer.add_graph(net, parsed_board)
-    torch.save(net.state_dict(), DEEPCHESS_PATH + 'board_classifier.pt')
+    #torch.save(net.state_dict(), DEEPCHESS_PATH + 'board_classifier.pt')
     writer.close()
 
     validateDeepChess(net, test_dataloader)
@@ -170,7 +172,7 @@ with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as h
     games_data = pickle.load(handle)
 
     print("There are", len(games_data), "available for training.")
-    training_size = 500
+    training_size = 1000
     parsed_boards = [game[0] for game in games_data][:training_size]
     boards = [game[1] for game in games_data][:training_size]
     outcomes = [game[2] for game in games_data][:training_size]
