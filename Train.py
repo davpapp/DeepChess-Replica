@@ -92,7 +92,7 @@ def trainAutoencoder(train_dataloader, test_dataloader):
 
 
 def trainDeepChess(train_dataloader, test_dataloader):
-    num_epochs = 5
+    num_epochs = 10
     batch_size = 128
 
     autoencoder = Autoencoder()
@@ -100,7 +100,7 @@ def trainDeepChess(train_dataloader, test_dataloader):
 
     evaluator = Evaluator()
 
-    net = Combined(autoencoder, evaluator)
+    net = Combined(autoencoder, evaluator).to(device)
 
     distance = nn.MSELoss()
     optimizer = torch.optim.Adam(net.parameters(),weight_decay=1e-5)
@@ -172,7 +172,7 @@ with open('parsed_games/2015-05.bare.[6004].parsed_flattened.pickle', 'rb') as h
     games_data = pickle.load(handle)
 
     print("There are", len(games_data), "available for training.")
-    training_size = 1000
+    training_size = 50000
     parsed_boards = [game[0] for game in games_data][:training_size]
     boards = [game[1] for game in games_data][:training_size]
     outcomes = [game[2] for game in games_data][:training_size]
